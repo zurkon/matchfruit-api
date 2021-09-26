@@ -10,7 +10,7 @@ public class MatchfruitapiApplication extends SpringBootServletInitializer {
 	
 	@Override
 	protected SpringApplicationBuilder configure(SpringApplicationBuilder application) {
-	    	return application.sources(Application.class);
+	    	return application.sources(MatchfruitapiApplication.class);
 	}
 
 	public static void main(String[] args) {
