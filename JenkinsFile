@@ -1,0 +1,62 @@
+pipeline {
+    agent any
+    tools {
+        maven 'apache-maven'
+    }
+    stages {
+        stage('Git') {
+            steps{
+                git branch: 'main', url: 'https://github.com/zurkon/matchfruit-api.git'   
+            }
+        }
+        stage('Build') {
+            steps {
+                sh 'mvn package'
+            }
+        }
+        stage('SonarScanner') {
+            environment {
+                SCANNER_HOME = tool 'SonarQube-Scanner'
+                PROJECT_KEY = 'matchFruitApiBuild'
+                PROJECT_NAME = 'MatchFruit-API-Build'
+            }
+            steps {
+                withSonarQubeEnv('SonarQube') {
+                    sh  '''$SCANNER_HOME/bin/sonar-scanner \
+                        -Dsonar.projectKey=$PROJECT_KEY \
+                        -Dsonar.projectName=$PROJECT_NAME \
+                        -Dsonar.sources=. \
+                        -Dsonar.language=java \
+                        -Dsonar.java.binaries=**/classes/**
+                        '''
+                }
+            }
+        }
+        stage("Quality Gate") {
+            steps {
+                timeout(time: 10, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
+        stage('Deploy') {
+            steps {
+                script {
+                    timeout(time: 2, unit: "HOURS") {
+                        def userInput = input(
+                            id: 'userInput', message: 'Realizar o Deploy ?', parameters: [
+                            [$class: 'TextParameterDefinition', defaultValue: 'Não', description: 'Realizar Deploy ?', name: 'Executar'] ] )
+                        echo (userInput)
+                        if ( userInput == 'Sim') {
+                            sh 'cp ./target/matchfruit.war /opt/tomcat/webapps/matchfruit.war'
+                            echo 'Deploy Realizado com Sucesso!!'
+                        } else {
+                            echo 'O Deploy NÃO será realizado.'
+                        }
+                    }
+                }
+                
+            }
+        }
+    }
+}
